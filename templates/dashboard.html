@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}控制台 | PyRunner{% endblock %}
+
+{% block body %}
+<div id="dashboard-root" class="dashboard-grid">
+    <section class="panel-surface hero-panel">
+        <div class="hero-copy">
+            <span class="eyebrow">PyRunner Web Manager</span>
+            <h1>统一管理脚本与运行态</h1>
+            <p>首页聚焦脚本清单与审计记录，日志和依赖安装结果进入脚本详情页查看。</p>
+        </div>
+        <div id="notice-banner" class="notice-banner" hidden></div>
+        <div class="hero-forms">
+            <form id="upload-form" class="panel-inset upload-form">
+                <div class="section-title">上传脚本</div>
+                <input class="form-control" type="file" name="script" accept=".py" required>
+                <div class="form-check mt-3">
+                    <input class="form-check-input" type="checkbox" value="true" id="auto-install" name="auto_install" checked>
+                    <label class="form-check-label" for="auto-install">上传后自动解析并安装依赖</label>
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">上传脚本</button>
+            </form>
+
+            <form id="environment-form" class="panel-inset environment-form">
+                <div class="section-title">创建环境</div>
+                <input class="form-control" type="text" name="name" placeholder="例如 data-pipeline" minlength="2" maxlength="32" required>
+                <button type="submit" class="btn btn-outline-dark mt-3">创建独立环境</button>
+            </form>
+        </div>
+    </section>
+
+    <section class="panel-surface scripts-panel">
+        <div class="panel-header-row">
+            <div>
+                <h2>脚本列表</h2>
+                <p>支持启动、停止、重启、安装依赖、切换虚拟环境，并进入详情页查看日志。</p>
+            </div>
+            <button id="refresh-button" class="btn btn-sm btn-outline-dark">刷新</button>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle app-table">
+                <thead>
+                    <tr>
+                        <th>脚本</th>
+                        <th>环境</th>
+                        <th>状态</th>
+                        <th>动作</th>
+                    </tr>
+                </thead>
+                <tbody id="script-table-body">
+                    <tr>
+                        <td colspan="4" class="empty-cell">暂无脚本</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel-surface operations-panel">
+        <div class="panel-header-row">
+            <div>
+                <h2>审计日志</h2>
+                <p>记录登录、上传、启动、停止、依赖安装等关键动作。</p>
+            </div>
+        </div>
+        <div id="operation-list" class="operation-list">
+            <div class="empty-state">暂无操作记录</div>
+        </div>
+        <div class="operation-pagination">
+            <button id="operation-prev" class="btn btn-sm btn-outline-dark" type="button">上一页</button>
+            <span id="operation-page-info" class="operation-page-info">第 1 页</span>
+            <button id="operation-next" class="btn btn-sm btn-outline-dark" type="button">下一页</button>
+        </div>
+    </section>
+</div>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}{{ script.name }} | 脚本详情 | PyRunner{% endblock %}
+
+{% block body %}
+<div id="script-detail-root" class="script-detail-layout" data-script-id="{{ script.id }}">
+    <section class="panel-surface script-detail-hero">
+        <div class="panel-header-row">
+            <div>
+                <span class="eyebrow">Script Detail</span>
+                <h1 id="detail-script-name">{{ script.name }}</h1>
+                <p id="detail-script-meta" class="selected-script-meta">{{ script.file_path }} · {{ script.environment_name or "未分配环境" }}</p>
+            </div>
+            <a class="btn btn-outline-dark" href="{{ url_for('index') }}">返回首页</a>
+        </div>
+        <div id="notice-banner" class="notice-banner" hidden></div>
+        <div class="script-detail-controls">
+            <div class="script-status-row">
+                <span id="detail-script-status" class="status-pill status-{{ script.status }}">{{ script.status }}</span>
+                <span id="detail-script-installing" class="status-pill status-installing" {% if not script.installing %}hidden{% endif %}>installing</span>
+            </div>
+            <div class="script-detail-actions">
+                <button id="detail-start-button" class="btn btn-outline-success" type="button">启动</button>
+                <button id="detail-stop-button" class="btn btn-outline-secondary" type="button">停止</button>
+                <button id="detail-restart-button" class="btn btn-outline-dark" type="button">重启</button>
+                <button id="detail-install-button" class="btn btn-outline-warning" type="button">安装依赖</button>
+                <button id="detail-delete-button" class="btn btn-outline-danger" type="button">删除脚本</button>
+            </div>
+            <div class="panel-inset detail-environment-card">
+                <div class="section-title">当前环境</div>
+                <select id="detail-environment-select" class="form-select detail-environment-select" aria-label="切换虚拟环境"></select>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel-surface detail-panel">
+        <div class="panel-header-row">
+            <div>
+                <h2>脚本详情</h2>
+                <p>查看当前脚本的依赖安装进度与实时输出。</p>
+            </div>
+        </div>
+        <div class="detail-grid">
+            <div class="panel-inset dependencies-card">
+                <div class="section-title">依赖安装记录</div>
+                <div id="dependency-status" class="dependency-status">暂无任务</div>
+                <div class="dependency-progress-shell" aria-hidden="true">
+                    <div class="dependency-progress-track">
+                        <div id="dependency-progress-fill" class="dependency-progress-fill"></div>
+                    </div>
+                    <div id="dependency-progress-meta" class="dependency-progress-meta">等待加载</div>
+                </div>
+                <div id="dependency-list" class="dependency-list empty-state">等待加载</div>
+            </div>
+            <div class="panel-inset logs-card">
+                <div class="section-title">实时日志</div>
+                <pre id="log-output" class="log-output">日志加载中...</pre>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

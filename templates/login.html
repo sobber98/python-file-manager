@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}登录 | PyRunner{% endblock %}
+
+{% block body %}
+<section class="login-shell">
+    <div class="login-card panel-surface">
+        <div class="eyebrow">Remote Python Script Control</div>
+        <h1 class="login-title">PyRunner Web Manager</h1>
+        <p class="login-subtitle">单用户登录后即可上传、启动和审计 Python 脚本。</p>
+        {% if error %}
+        <div class="alert alert-danger py-2 mb-3">{{ error }}</div>
+        {% endif %}
+        <form method="post" class="login-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label class="form-label" for="username">用户名</label>
+            <input class="form-control form-control-lg mb-3" id="username" name="username" value="admin" required autocomplete="username">
+            <label class="form-label" for="password">密码</label>
+            <input class="form-control form-control-lg mb-4" id="password" name="password" type="password" required autocomplete="current-password">
+            <button class="btn btn-primary btn-lg w-100" type="submit">进入控制台</button>
+        </form>
+        <div class="login-tip">首次启动默认账号为 admin，密码可通过环境变量 ADMIN_PASSWORD 覆盖。</div>
+    </div>
+</section>
+{% endblock %}

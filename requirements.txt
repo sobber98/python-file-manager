@@ -1,0 +1,4 @@
+Flask>=2.3,<4
+Flask-WTF>=1.2,<2
+gunicorn>=21,<24
+psutil>=5.9,<8

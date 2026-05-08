@@ -1,0 +1,19 @@
+[Unit]
+Description=PyRunner Web Manager
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/python-file-manager
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/etc/pyrunner/pyrunner.env
+ExecStart=/opt/python-file-manager/.venv/bin/gunicorn -c /opt/python-file-manager/gunicorn.conf.py app:app
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
