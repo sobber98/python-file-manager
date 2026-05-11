@@ -499,12 +499,17 @@ if (dashboardRoot || scriptDetailRoot) {
                 return;
             }
 
+            const MAX_LOG_LINES = 2000;
             const incomingLines = data.lines || [];
             if (reset || data.truncated || cursor === 0) {
-                elements.logOutput.textContent = incomingLines.join("\n") || "暂无日志";
+                const trimmed = incomingLines.slice(-MAX_LOG_LINES);
+                elements.logOutput.textContent = trimmed.join("\n") || "暂无日志";
             } else if (incomingLines.length) {
-                const prefix = elements.logOutput.textContent && elements.logOutput.textContent !== "暂无日志" ? "\n" : "";
-                elements.logOutput.textContent += `${prefix}${incomingLines.join("\n")}`;
+                const existing = elements.logOutput.textContent !== "暂无日志" ? elements.logOutput.textContent : "";
+                const existingLines = existing ? existing.split("\n") : [];
+                const merged = existingLines.concat(incomingLines);
+                const trimmed = merged.slice(-MAX_LOG_LINES);
+                elements.logOutput.textContent = trimmed.join("\n");
             }
 
             state.logCursor = Number(data.cursor || 0);

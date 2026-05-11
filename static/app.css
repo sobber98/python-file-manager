@@ -356,14 +356,17 @@ body {
 
 .log-output {
     min-height: 440px;
+    max-height: 60vh;
     margin: 0;
     padding: 18px;
     border-radius: 20px;
     background: var(--surface-dark);
     color: #defdf5;
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
     white-space: pre-wrap;
     line-height: 1.5;
+    word-break: break-all;
 }
 
 .notice-banner {
@@ -476,5 +479,6 @@ body {
 
     .log-output {
         min-height: 320px;
+        max-height: 50vh;
     }
 }
