@@ -46,7 +46,7 @@ def parse_manual_packages(raw: str | None) -> set[str]:
 
 def extract_imports(script_path: str | Path) -> list[str]:
     path = Path(script_path)
-    source = path.read_text(encoding="utf-8")
+    source = path.read_text(encoding="utf-8-sig")
     tree = ast.parse(source, filename=str(path))
     packages: set[str] = set()
 

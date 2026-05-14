@@ -33,6 +33,15 @@ import yaml
 
         self.assertEqual(imports, ["PyYAML", "numpy", "requests"])
 
+    def test_extract_imports_accepts_utf8_bom(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            script_path = Path(temp_dir) / "bom_script.py"
+            script_path.write_text("# -*- coding: utf-8 -*-\nimport requests\n", encoding="utf-8-sig")
+
+            imports = dependency_manager.extract_imports(script_path)
+
+        self.assertEqual(imports, ["requests"])
+
 
 class DependencyOutputFormattingTests(unittest.TestCase):
     def test_format_install_log_generates_summary_and_collapsed_preview(self):
