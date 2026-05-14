@@ -32,6 +32,7 @@ usage() {
 命令：
   install    安装或升级项目（需要配置文件，默认：deploy/install.conf）
   uninstall  卸载服务、Nginx 站点及运行时配置文件
+  password   修改管理员登录密码
   start      启动服务
   stop       停止服务
   restart    重启服务
@@ -40,6 +41,7 @@ usage() {
 示例：
   sudo bash deploy/install.sh install
   sudo bash deploy/install.sh install /path/to/custom.conf
+  sudo bash deploy/install.sh password
   sudo bash deploy/install.sh restart
   sudo bash deploy/install.sh uninstall
 EOF
@@ -55,10 +57,11 @@ interactive_menu() {
         echo -e "  ${C_YELLOW}3)${C_RESET} 停止服务"
         echo -e "  ${C_YELLOW}4)${C_RESET} 重启服务"
         echo -e "  ${C_CYAN}5)${C_RESET} 查看服务状态"
-        echo -e "  ${C_RED}6)${C_RESET} 卸载"
+        echo -e "  ${C_GREEN}6)${C_RESET} 修改管理员密码"
+        echo -e "  ${C_RED}7)${C_RESET} 卸载"
         echo -e "  ${C_DIM}0)${C_RESET} 退出"
         echo
-        read -r -p "  请输入编号 [0-6]：" choice
+        read -r -p "  请输入编号 [0-7]：" choice
         echo
         case "$choice" in
             1)
@@ -96,6 +99,13 @@ interactive_menu() {
                 ;;
             6)
                 if [[ "$EUID" -ne 0 ]]; then
+                    echo -e "${C_RED}修改密码需要 root 权限，请使用 sudo 重新执行。${C_RESET}"
+                else
+                    cmd_change_password
+                fi
+                ;;
+            7)
+                if [[ "$EUID" -ne 0 ]]; then
                     echo -e "${C_RED}卸载需要 root 权限，请使用 sudo 重新执行。${C_RESET}"
                 else
                     cmd_uninstall
@@ -106,7 +116,7 @@ interactive_menu() {
                 exit 0
                 ;;
             *)
-                echo -e "${C_YELLOW}无效输入，请输入 0-6 之间的数字。${C_RESET}"
+                echo -e "${C_YELLOW}无效输入，请输入 0-7 之间的数字。${C_RESET}"
                 ;;
         esac
         echo
@@ -190,6 +200,15 @@ load_config() {
     NGINX_SITE_ENABLED="/etc/nginx/sites-enabled/${NGINX_SITE_NAME}.conf"
 }
 
+load_runtime_env() {
+    if [[ -f "$RUNTIME_ENV_FILE" ]]; then
+        set -a
+        # shellcheck disable=SC1090
+        source "$RUNTIME_ENV_FILE"
+        set +a
+    fi
+}
+
 # ── 安装辅助函数 ───────────────────────────────────────────────────────────────
 generate_secret() {
     "$PYTHON_BIN" - <<'PY'
@@ -203,6 +222,39 @@ generate_password() {
 import secrets
 print(secrets.token_urlsafe(18))
 PY
+}
+
+shell_escape_single_quoted() {
+    printf "'%s'" "$(printf "%s" "$1" | sed "s/'/'\\\\''/g")"
+}
+
+update_runtime_env_value() {
+    local key="$1"
+    local value="$2"
+    local escaped_value
+    local tmp_file
+
+    [[ -f "$RUNTIME_ENV_FILE" ]] || return 0
+
+    escaped_value="$(shell_escape_single_quoted "$value")"
+    tmp_file="$(mktemp "${RUNTIME_ENV_FILE}.XXXXXX")"
+    awk -v key="$key" -v value="$escaped_value" '
+        BEGIN { found = 0 }
+        $0 ~ "^" key "=" {
+            print key "=" value
+            found = 1
+            next
+        }
+        { print }
+        END {
+            if (!found) {
+                print key "=" value
+            }
+        }
+    ' "$RUNTIME_ENV_FILE" > "$tmp_file"
+    chown root:"$RUN_GROUP" "$tmp_file"
+    chmod 0640 "$tmp_file"
+    mv "$tmp_file" "$RUNTIME_ENV_FILE"
 }
 
 ensure_system_account() {
@@ -504,6 +556,74 @@ cmd_uninstall() {
     echo "卸载完成。项目文件保留在：$PROJECT_DIR"
 }
 
+cmd_change_password() {
+    load_config false
+    load_runtime_env
+
+    local python_bin="$PYTHON_BIN"
+    local new_password=""
+    local confirm_password=""
+
+    if [[ -x "$PROJECT_DIR/.venv/bin/python" ]]; then
+        python_bin="$PROJECT_DIR/.venv/bin/python"
+    fi
+    require_command "$python_bin"
+
+    if [[ ! -f "$PYRUNNER_DB_PATH" ]]; then
+        echo "数据库文件不存在：$PYRUNNER_DB_PATH" >&2
+        echo "请先执行安装，或检查配置文件中的 PYRUNNER_DB_PATH。" >&2
+        exit 1
+    fi
+
+    echo "正在修改管理员密码：$ADMIN_USERNAME"
+    read -r -s -p "请输入新密码：" new_password
+    echo
+    read -r -s -p "请再次输入新密码：" confirm_password
+    echo
+
+    if [[ -z "$new_password" ]]; then
+        echo "密码不能为空。" >&2
+        exit 1
+    fi
+    if [[ "$new_password" != "$confirm_password" ]]; then
+        echo "两次输入的密码不一致。" >&2
+        exit 1
+    fi
+
+    ADMIN_USERNAME="$ADMIN_USERNAME" NEW_ADMIN_PASSWORD="$new_password" PYRUNNER_DB_PATH="$PYRUNNER_DB_PATH" "$python_bin" - <<'PY'
+import os
+import sqlite3
+from werkzeug.security import generate_password_hash
+
+db_path = os.environ["PYRUNNER_DB_PATH"]
+username = os.environ["ADMIN_USERNAME"]
+password = os.environ["NEW_ADMIN_PASSWORD"]
+
+connection = sqlite3.connect(db_path)
+try:
+    cursor = connection.execute(
+        "UPDATE user SET password_hash = ? WHERE username = ?",
+        (generate_password_hash(password), username),
+    )
+    if cursor.rowcount == 0:
+        connection.execute(
+            "INSERT INTO user (username, password_hash) VALUES (?, ?)",
+            (username, generate_password_hash(password)),
+        )
+    connection.commit()
+finally:
+    connection.close()
+PY
+
+    update_runtime_env_value "ADMIN_PASSWORD" "$new_password"
+
+    echo
+    echo "管理员密码已更新。"
+    if [[ -f "$RUNTIME_ENV_FILE" ]]; then
+        echo "运行环境文件已同步：$RUNTIME_ENV_FILE"
+    fi
+}
+
 cmd_start() {
     load_config false
     require_command systemctl
@@ -543,6 +663,10 @@ case "$COMMAND" in
     uninstall)
         require_root
         cmd_uninstall
+        ;;
+    password|change-password|passwd)
+        require_root
+        cmd_change_password
         ;;
     start)
         require_root
